@@ -114,7 +114,7 @@ void vm_thread(void* v) {
           vm.Vx[hex_char(str[1])] ^= vm.Vx[hex_char(str[2])];
           break;
         case '4':
-          vm.Vx[hex_char(str[1])] += vm.Vx[hex_char(str[2])]
+          vm.Vx[hex_char(str[1])] += vm.Vx[hex_char(str[2])];
           if (vm.Vx[hex_char(str[1])] + vm.Vx[hex_char(str[2])] > 255) {
             vm.Vx[15] = 1;
             vm.Vx[hex_char(str[1])] &= 0x255;
@@ -122,7 +122,6 @@ void vm_thread(void* v) {
             vm.Vx[15] = 0;
           }
           break;
-
       }
   }
 

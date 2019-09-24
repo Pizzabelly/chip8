@@ -9,7 +9,7 @@ win: BIN = chip8.exe
 all: executable
 win: executable
 
-all: LDFLAGS  = -lncursesw -lpthread
+all: LDFLAGS  = -lncursesw -ltinfow -lpthread
 win: LDFLAGS  = ./win/pdcurses.a
 
 executable: chip8.c ui.c util.c
