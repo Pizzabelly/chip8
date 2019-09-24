@@ -19,6 +19,8 @@ typedef struct {
   u16 I;
 
   u8 Vx[16];
+
+  u8 screen[64][32];
 } chip8_vm;
 
 extern chip8_vm vm;

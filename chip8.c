@@ -55,9 +55,6 @@ void push_top_of_stack(u16 val) {
 }
 
 void vm_thread(void* v) {
-  if (vm.PC > vm.rom_size) {
-    return;
-  }
 
   // read 2 bytes and convert to big-endian
   u16 instr = htons(vm.rom[(vm.PC) - 0x1FF]<<8 | vm.rom[(vm.PC) - 0x200]);
@@ -113,6 +110,19 @@ void vm_thread(void* v) {
         case '2':
           vm.Vx[hex_char(str[1])] &= vm.Vx[hex_char(str[2])];
           break;
+        case '3':
+          vm.Vx[hex_char(str[1])] ^= vm.Vx[hex_char(str[2])];
+          break;
+        case '4':
+          vm.Vx[hex_char(str[1])] += vm.Vx[hex_char(str[2])]
+          if (vm.Vx[hex_char(str[1])] + vm.Vx[hex_char(str[2])] > 255) {
+            vm.Vx[15] = 1;
+            vm.Vx[hex_char(str[1])] &= 0x255;
+          } else {
+            vm.Vx[15] = 0;
+          }
+          break;
+
       }
   }
 
