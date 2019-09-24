@@ -122,6 +122,38 @@ void vm_thread(void* v) {
             vm.Vx[15] = 0;
           }
           break;
+        case '5':
+          if (vm.Vx[hex_char(str[1])] > vm.Vx[hex_char(str[2])]) {
+            vm.Vx[15] = 1;
+          } else {
+            vm.Vx[15] = 0;
+          }
+          vm.Vx[hex_char(str[1])] -= vm.Vx[hex_char(str[2])];
+          break;
+        case '6':
+          if ((vm.Vx[hex_char(str[1])] & 1) == 1) {
+            vm.Vx[15] = 1;
+          } else {
+            vm.Vx[15] = 0;
+          }
+          vm.Vx[hex_char(str[1])] /= 2;
+          break;
+        case '7':
+          if (vm.Vx[hex_char(str[1])] < vm.Vx[hex_char(str[2])]) {
+            vm.Vx[15] = 1;
+          } else {
+            vm.Vx[15] = 0;
+          }
+          vm.Vx[hex_char(str[1])] = vm.Vx[hex_char(str[2])] - vm.Vx[hex_char(str[1])];
+          break;
+        case 'e':
+          if ((vm.Vx[hex_char(str[1])] & 1) == 1) {
+            vm.Vx[15] = 1;
+          } else {
+            vm.Vx[15] = 0;
+          }
+          vm.Vx[hex_char(str[1])] *= 2;
+          break;
       }
   }
 
