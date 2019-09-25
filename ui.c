@@ -1,5 +1,6 @@
 #include <ncurses.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,16 +48,35 @@ void draw() {
   mvaddstr(36, 46, buf);
 }
 
-void curses_thread(void* v) {
-  char c;
-  while(1) {
-    c = getch();
-    if (c == 'q') {
-      endwin();
-      exit(1);
+u8 ui_get_key(bool block) {
+  do {
+    char c = getch();
+    switch (c) {
+      case '1': return 0x0;
+      case '2': return 0x1;
+      case '3': return 0x2;
+      case '4': return 0x3;
+      case 'q': return 0x4;
+      case 'w': return 0x5;
+      case 'e': return 0x6;
+      case 'r': return 0x7;
+      case 'a': return 0x8;
+      case 's': return 0x9;
+      case 'd': return 0xA;
+      case 'f': return 0xB;
+      case 'z': return 0xC;
+      case 'x': return 0xD;
+      case 'c': return 0xE;
+      case 'v': return 0xF;
     }
+  } while (block);
+}
+
+void curses_thread(void* v) {
+  while(1) {
     erase();
     draw();
+    vm.keyboard[ui_get_key(false)] = 1;
     usleep(100);
   }
 }

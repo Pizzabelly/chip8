@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <time.h>
 #include <arpa/inet.h>
 
@@ -15,7 +17,7 @@
 #include "util.h"
 #include "chip8.h"
 
-#define ROM_FILE "roms/joe.ch8"
+#define ROM_FILE "roms/e.ch8"
 
 static void load_rom();
 static void init_vm();
@@ -104,11 +106,7 @@ void vm_thread(void* v) {
       vm.Vx[hex_char(str[1])] = hex_str(str+2);
       break;
     case '7':
-      //if ((vm.Vx[hex_char(str[1])] + hex_str(str+2)) > 255) {
-      //  vm.Vx[hex_char(str[1])] = (vm.Vx[hex_char(str[1])] + hex_str(str+2)) - 255;
-      //} else {
       vm.Vx[hex_char(str[1])] += hex_str(str+2);
-      //}
       break;
     case '8':
       switch(str[3]) {
@@ -191,13 +189,8 @@ void vm_thread(void* v) {
             u8 x = (vm.Vx[hex_char(str[1])] + 7) - s;
             u8 y = i + vm.Vx[hex_char(str[2])];
             
-            while(x > 63) {
-              x -= 63;
-            }
-            
-            while (y > 31) {
-              y -= 31;
-            }
+            while (x > 63) { x -= 63; }
+            while (y > 31) { y -= 31; }
 
             if (vm.screen[x][y]) {
               vm.screen[x][y] = 0;
@@ -208,10 +201,45 @@ void vm_thread(void* v) {
         }
       }
       break;
-    //case 'f':
-    //  switch(str[2]) {
-    //    case '2':
-
+    case 'e':
+      if (hex_str(str+2) == 0x9E) {
+        if (vm.keyboard[vm.Vx[hex_char(str[1])]]) {
+          vm.PC += 0x2;
+        }
+      } else if (hex_str(str+2) == 0xA1) {
+        if (!vm.keyboard[vm.Vx[hex_char(str[1])]]) {
+          vm.PC += 0x2;
+        }
+      }
+      break;
+    case 'f':
+      if (hex_str(str+2) == 0x07) {
+        vm.Vx[hex_char(str[1])] = vm.DT;
+      } else if (hex_str(str+2) == 0x0A) {
+        vm.Vx[hex_char(str[1])] = ui_get_key(true);
+      } else if (hex_str(str+2) == 0x15) {
+        vm.DT = vm.Vx[hex_char(str[1])];
+      } else if (hex_str(str+2) == 0x18) {
+        vm.ST = vm.Vx[hex_char(str[1])];
+      } else if (hex_str(str+2) == 0x1E) {
+        vm.I += vm.Vx[hex_char(str[1])];
+      } else if (hex_str(str+2) == 0x29) {
+        // characters
+      } else if (hex_str(str+2) == 0x33) {
+        u8 tmp =  vm.Vx[hex_char(str[1])];
+        vm.rom[vm.I - 0x200] = floor(tmp / 100);
+        vm.rom[(vm.I - 0x200)+1] = floor((tmp % 100)/10);
+        vm.rom[(vm.I - 0x200)+2] = floor(tmp % 10);
+      } else if (hex_str(str+2) == 0x55) {
+        for (int i = 0; i < hex_char(str[1]); i++) {
+          vm.rom[(vm.I - 0x200) - i] = vm.Vx[i];
+        }
+      } else if (hex_str(str+2) == 0x65) {
+        for (int i = 0; i < hex_char(str[1]); i++) {
+          vm.Vx[i]  = vm.rom[(vm.I - 0x200) - i];
+        }
+      }
+      break;
   }
 
   vm.PC += 0x2;

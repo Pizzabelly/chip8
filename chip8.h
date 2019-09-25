@@ -20,6 +20,8 @@ typedef struct {
 
   u8 Vx[16];
 
+  u8 keyboard[16];
+
   u8 screen[64][32];
 } chip8_vm;
 
