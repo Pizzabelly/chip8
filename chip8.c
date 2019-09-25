@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <arpa/inet.h>
 
 #ifdef _WIN32
@@ -14,7 +15,7 @@
 #include "util.h"
 #include "chip8.h"
 
-#define ROM_FILE "roms/a.ch8"
+#define ROM_FILE "roms/joe.ch8"
 
 static void load_rom();
 static void init_vm();
@@ -62,10 +63,16 @@ void vm_thread(void* v) {
   char str[5];
   sprintf(str, "%x", instr);
 
+  u8 buf[255];
+
+  if (instr == 0xE0) {
+    memset(&vm.screen, 0, sizeof(vm.screen));
+  }
+
   switch (*str) {
     case '0':
       if (instr == 0x00E0) {
-        //clearscreen
+        memset(&vm.screen, 0, sizeof(vm.screen));
       } else if (instr == 0x00EE) {
         vm.PC = vm.stack[vm.SP--];
       } 
@@ -97,7 +104,11 @@ void vm_thread(void* v) {
       vm.Vx[hex_char(str[1])] = hex_str(str+2);
       break;
     case '7':
+      //if ((vm.Vx[hex_char(str[1])] + hex_str(str+2)) > 255) {
+      //  vm.Vx[hex_char(str[1])] = (vm.Vx[hex_char(str[1])] + hex_str(str+2)) - 255;
+      //} else {
       vm.Vx[hex_char(str[1])] += hex_str(str+2);
+      //}
       break;
     case '8':
       switch(str[3]) {
@@ -155,12 +166,59 @@ void vm_thread(void* v) {
           vm.Vx[hex_char(str[1])] *= 2;
           break;
       }
+      break;
+    case '9':
+      if (vm.Vx[hex_char(str[1])] != vm.Vx[hex_char(str[2])]) {
+        vm.PC += 0x2;
+      }
+      break;
+    case 'a':
+      vm.I = hex_str(str+1);
+      break;
+    case 'b':
+      vm.PC = hex_str(str+1) + vm.Vx[0];
+      break;
+    case 'c':
+      vm.Vx[hex_char(str[1])] = (rand() % 255) & hex_str(str+2);
+      break;
+    case 'd':
+      memcpy(buf, &vm.rom[vm.I - 0x200], hex_char(str[3]));
+      for (int i = 0; i < hex_char(str[3]); i++) {
+        for (int s = 0; s < 8; s++) {
+          u8 bit = (buf[i]>>s)&1;
+
+          if (bit) {
+            u8 x = (vm.Vx[hex_char(str[1])] + 7) - s;
+            u8 y = i + vm.Vx[hex_char(str[2])];
+            
+            while(x > 63) {
+              x -= 63;
+            }
+            
+            while (y > 31) {
+              y -= 31;
+            }
+
+            if (vm.screen[x][y]) {
+              vm.screen[x][y] = 0;
+            } else {
+              vm.screen[x][y] = 1;
+            }
+          }
+        }
+      }
+      break;
+    //case 'f':
+    //  switch(str[2]) {
+    //    case '2':
+
   }
 
   vm.PC += 0x2;
 }
 
 int main(void) {
+  srand(time(NULL));
   init_vm();
   load_rom();
 
@@ -177,7 +235,7 @@ int main(void) {
   void *loop(void) {
     while(1) {
       vm_thread(0);
-      usleep(100);
+      usleep(1000);
     }
     return 0;
   } 

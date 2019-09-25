@@ -19,7 +19,7 @@ void draw() {
   for (int x = 0; x < 64; x++) {
     for (int y = 0; y < 32; y++) {
       if (vm.screen[x][y]) {
-        mvaddstr(x * 2, y, "[]");
+        mvaddstr(y, x * 2, "[]");
       }
     }
   }
@@ -55,6 +55,7 @@ void curses_thread(void* v) {
       endwin();
       exit(1);
     }
+    erase();
     draw();
     usleep(100);
   }
