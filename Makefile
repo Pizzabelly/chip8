@@ -12,8 +12,8 @@ win: executable
 all: LDFLAGS  = -lncursesw -ltinfow -lpthread
 win: LDFLAGS  = ./win/pdcurses.a -lpthread
 
-executable: chip8.c ui.c util.c
-	$(CC) $(CFLAGS) -o $(BIN) chip8.c ui.c util.c $(LDFLAGS)
+executable: chip8.c ui.c
+	$(CC) $(CFLAGS) -o $(BIN) chip8.c ui.c $(LDFLAGS)
 
 clean:
 	$(RM) chip8 

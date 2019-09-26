@@ -70,13 +70,17 @@ u8 ui_get_key(bool block) {
       case 'v': return 0xF;
     }
   } while (block);
+  return 0x10;
 }
 
 void curses_thread(void* v) {
+  u8 c;
   while(1) {
     erase();
     draw();
-    vm.keyboard[ui_get_key(false)] = 1;
+    if ((c = ui_get_key(false)) <= 0xF) {
+      vm.keyboard[c] = 1;
+    }
     usleep(100);
   }
 }

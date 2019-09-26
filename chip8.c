@@ -60,134 +60,146 @@ void push_top_of_stack(u16 val) {
 void vm_thread(void* v) {
 
   // read 2 bytes and convert to big-endian
-  u16 instr = htons(vm.rom[(vm.PC) - 0x1FF]<<8 | vm.rom[(vm.PC) - 0x200]);
-
-  char str[5];
-  sprintf(str, "%x", instr);
+  u16 in = htons(vm.rom[(vm.PC) - 0x1FF]<<8 | vm.rom[(vm.PC) - 0x200]);
 
   u8 buf[255];
 
-  if (instr == 0xE0) {
+  if (in == 0xE0) {
     memset(&vm.screen, 0, sizeof(vm.screen));
   }
 
-  switch (*str) {
-    case '0':
-      if (instr == 0x00E0) {
+  // in>>12&0xF  0xFFFf
+  //               ^
+  // in>>8&0xF   0xFFFf
+  //                ^
+  // in>>4&0xF   0xFFFf
+  //                 ^
+  // in&0xF      0xFFFf
+  //                  ^
+  // in&0xFFF    0xFFFf
+  //                ^^^
+  // in&0xFF     0xFFFf
+  //                 ^^
+  // in&0xFF     0xFFFf
+  //                 ^^
+
+  switch ((in>>12&0xF)) {
+    case 0x0: 
+      if (in == 0x00E0) { // CLS
         memset(&vm.screen, 0, sizeof(vm.screen));
-      } else if (instr == 0x00EE) {
+      } else if (in == 0x00EE) { // RET
         vm.PC = vm.stack[vm.SP--];
       } 
       break;
-    case '1':
-      vm.PC = hex_str(str+1);
+    case 0x1: // JP addr
+      vm.PC = in&0xFFF;
       break;
-    case '2':
+    case 0x2: // CALL addr
       vm.SP++;
       push_top_of_stack(vm.PC);
-      vm.PC = hex_str(str+1);
+      vm.PC = in&0xFFF;
       break;
-    case '3':
-      if (vm.Vx[hex_char(str[1])] == hex_str(str+2)) {
+    case 0x3: // SE Vx, byte
+      if (vm.Vx[in>>8&0xF] == (in&0xFF)) {
         vm.PC += 0x2;
       }
       break;
-    case '4':
-      if (vm.Vx[hex_char(str[1])] != hex_str(str+2)) {
+    case 0x4: // SNE Vx, byte
+      if (vm.Vx[in>>8&0xF] != (in&0xFF)) {
         vm.PC += 0x2;
       }
       break;
-    case '5':
-      if (vm.Vx[hex_char(str[1])] == vm.Vx[hex_char(str[2])]) {
+    case 0x5: // SE Vx, Vy
+      if (vm.Vx[in>>8&0xF] == vm.Vx[in>>4&0xF]) {
         vm.PC += 0x2;
       }
       break;
-    case '6':
-      vm.Vx[hex_char(str[1])] = hex_str(str+2);
+    case 0x6: // LD Vx, byte
+      vm.Vx[in>>8&0xF] = in&0xFF;
       break;
-    case '7':
-      vm.Vx[hex_char(str[1])] += hex_str(str+2);
+    case 0x7: // ADD Vx, byte
+      vm.Vx[in>>8&0xF] += in&0xFF;
       break;
-    case '8':
-      switch(str[3]) {
-        case '0':
-          vm.Vx[hex_char(str[1])] = vm.Vx[hex_char(str[2])];
+    case 0x8: 
+      switch(in&0xF) {
+        case 0x0: // LD Vx, Vy 
+          vm.Vx[in>>8&0xF] = vm.Vx[in>>4&0xF];
           break;
-        case '1':
-          vm.Vx[hex_char(str[1])] |= vm.Vx[hex_char(str[2])];
+        case 0x1: // OR Vx, Vy 
+          vm.Vx[in>>8&0xF] |= vm.Vx[in>>4&0xF];
           break;
-        case '2':
-          vm.Vx[hex_char(str[1])] &= vm.Vx[hex_char(str[2])];
+        case 0x2: // AND Vx, Vy
+          vm.Vx[in>>8&0xF] &= vm.Vx[in>>4&0xF];
           break;
-        case '3':
-          vm.Vx[hex_char(str[1])] ^= vm.Vx[hex_char(str[2])];
+        case 0x3: // XOR Vx, Vy 
+          vm.Vx[in>>8&0xF] ^= vm.Vx[in>>4&0xF];
           break;
-        case '4':
-          vm.Vx[hex_char(str[1])] += vm.Vx[hex_char(str[2])];
-          if (vm.Vx[hex_char(str[1])] + vm.Vx[hex_char(str[2])] > 255) {
+        case 0x4: // ADD Vx, Vy 
+          vm.Vx[in>>8&0xF] += vm.Vx[in>>4&0xF];
+          if (vm.Vx[in>>8&0xF] + vm.Vx[in>>4&0xF] > 255) {
             vm.Vx[15] = 1;
-            vm.Vx[hex_char(str[1])] &= 0x255;
+            vm.Vx[in>>8&0xF] &= 0xFF;
           } else {
             vm.Vx[15] = 0;
           }
           break;
-        case '5':
-          if (vm.Vx[hex_char(str[1])] > vm.Vx[hex_char(str[2])]) {
+        case 0x5: // SUB Vx, Vy 
+          if (vm.Vx[in>>8&0xF] > vm.Vx[in>>4&0xF]) {
             vm.Vx[15] = 1;
           } else {
             vm.Vx[15] = 0;
           }
-          vm.Vx[hex_char(str[1])] -= vm.Vx[hex_char(str[2])];
+          vm.Vx[in>>8&0xF] -= vm.Vx[in>>4&0xF];
           break;
-        case '6':
-          if ((vm.Vx[hex_char(str[1])] & 1) == 1) {
+        case 0x6: // SHR Vx {, Vy}
+          if ((vm.Vx[in>>8&0xF] & 1) == 1) {
             vm.Vx[15] = 1;
           } else {
             vm.Vx[15] = 0;
           }
-          vm.Vx[hex_char(str[1])] /= 2;
+          vm.Vx[in>>8&0xF] /= 2;
           break;
-        case '7':
-          if (vm.Vx[hex_char(str[1])] < vm.Vx[hex_char(str[2])]) {
+        case 0x7: // SUBN Vx, Vy
+          if (vm.Vx[in>>8&0xF] < vm.Vx[in>>4&0xF]) {
             vm.Vx[15] = 1;
           } else {
             vm.Vx[15] = 0;
           }
-          vm.Vx[hex_char(str[1])] = vm.Vx[hex_char(str[2])] - vm.Vx[hex_char(str[1])];
+          vm.Vx[in>>8&0xF] = vm.Vx[in>>4&0xF] - vm.Vx[in>>8&0xF];
           break;
-        case 'e':
-          if ((vm.Vx[hex_char(str[1])] & 1) == 1) {
+        case 0xE: // SHL Vx {, Vy} 
+          if ((vm.Vx[in>>8&0xF] & 1) == 1) {
             vm.Vx[15] = 1;
           } else {
             vm.Vx[15] = 0;
           }
-          vm.Vx[hex_char(str[1])] *= 2;
+          vm.Vx[in>>8&0xF] *= 2;
           break;
       }
       break;
-    case '9':
-      if (vm.Vx[hex_char(str[1])] != vm.Vx[hex_char(str[2])]) {
+    case 0x9: // SNE Vx, Vy 
+      if (vm.Vx[(in>>8&0xF)] != vm.Vx[(in>>4&0xF)]) {
         vm.PC += 0x2;
       }
       break;
-    case 'a':
-      vm.I = hex_str(str+1);
+    case 0xA: // LD I, addr
+      vm.I = in&0xFFF;
       break;
-    case 'b':
-      vm.PC = hex_str(str+1) + vm.Vx[0];
+    case 0xB: // JP V0, addr
+      vm.PC = (in&0xFFF) + vm.Vx[0];
       break;
-    case 'c':
-      vm.Vx[hex_char(str[1])] = (rand() % 255) & hex_str(str+2);
+    case 0xC: // RND Vx, byte
+      vm.Vx[in>>8&0xF] = (rand() % 255) & in&0xFF;
       break;
-    case 'd':
-      memcpy(buf, &vm.rom[vm.I - 0x200], hex_char(str[3]));
-      for (int i = 0; i < hex_char(str[3]); i++) {
+    case 0xD: // DRW Vx, Vy, nibble
+      memcpy(buf, &vm.rom[vm.I - 0x200], in&0xF);
+      for (int i = 0; i < (in&0xF); i++) {
         for (int s = 0; s < 8; s++) {
           u8 bit = (buf[i]>>s)&1;
 
           if (bit) {
-            u8 x = (vm.Vx[hex_char(str[1])] + 7) - s;
-            u8 y = i + vm.Vx[hex_char(str[2])];
+            u8 x = (vm.Vx[in>>8&0xF] + 7) - s;
+            u8 y = i + vm.Vx[in>>4&0xF];
             
             while (x > 63) { x -= 63; }
             while (y > 31) { y -= 31; }
@@ -201,45 +213,56 @@ void vm_thread(void* v) {
         }
       }
       break;
-    case 'e':
-      if (hex_str(str+2) == 0x9E) {
-        if (vm.keyboard[vm.Vx[hex_char(str[1])]]) {
-          vm.PC += 0x2;
-        }
-      } else if (hex_str(str+2) == 0xA1) {
-        if (!vm.keyboard[vm.Vx[hex_char(str[1])]]) {
-          vm.PC += 0x2;
-        }
+    case 0xE: 
+      switch (in&0xFF) {
+        case 0x9E:
+          if (vm.keyboard[vm.Vx[in>>8&0xF]]) {
+            vm.PC += 0x2;
+          }
+          break;
+        case 0xA1:
+          if (!vm.keyboard[vm.Vx[in>>8&0xF]]) {
+            vm.PC += 0x2;
+          }
+          break;
       }
       break;
-    case 'f':
-      if (hex_str(str+2) == 0x07) {
-        vm.Vx[hex_char(str[1])] = vm.DT;
-      } else if (hex_str(str+2) == 0x0A) {
-        vm.Vx[hex_char(str[1])] = ui_get_key(true);
-      } else if (hex_str(str+2) == 0x15) {
-        vm.DT = vm.Vx[hex_char(str[1])];
-      } else if (hex_str(str+2) == 0x18) {
-        vm.ST = vm.Vx[hex_char(str[1])];
-      } else if (hex_str(str+2) == 0x1E) {
-        vm.I += vm.Vx[hex_char(str[1])];
-      } else if (hex_str(str+2) == 0x29) {
-        // characters
-      } else if (hex_str(str+2) == 0x33) {
-        u8 tmp =  vm.Vx[hex_char(str[1])];
-        vm.rom[vm.I - 0x200] = floor(tmp / 100);
-        vm.rom[(vm.I - 0x200)+1] = floor((tmp % 100)/10);
-        vm.rom[(vm.I - 0x200)+2] = floor(tmp % 10);
-      } else if (hex_str(str+2) == 0x55) {
-        for (int i = 0; i < hex_char(str[1]); i++) {
-          vm.rom[(vm.I - 0x200) - i] = vm.Vx[i];
-        }
-      } else if (hex_str(str+2) == 0x65) {
-        for (int i = 0; i < hex_char(str[1]); i++) {
-          vm.Vx[i]  = vm.rom[(vm.I - 0x200) - i];
-        }
+    case 0xF:
+      switch (in&0xFF) {
+        case 0x07:
+          vm.Vx[in>>8&0xF] = vm.DT;
+          break;
+        case 0x0A:
+          vm.Vx[in>>8&0xF] = ui_get_key(true);
+          break;
+        case 0x15:
+          vm.DT = vm.Vx[in>>8&0xF];
+          break;
+        case 0x18:
+          vm.ST = vm.Vx[in>>8&0xF];
+          break;
+        case 0x1E:
+          vm.I += vm.Vx[in>>8&0xF];
+          break;
+        case 0x29:
+          // characters
+          break;
+        case 0x33:
+          vm.rom[vm.I - 0x200] = floor(vm.Vx[in>>8&0xF] / 100);
+          vm.rom[(vm.I - 0x200)+1] = floor((vm.Vx[in>>8&0xF] % 100)/10);
+          vm.rom[(vm.I - 0x200)+2] = floor(vm.Vx[in>>8&0xF] % 10);
+          break;
+        case 0x55:
+          for (int i = 0; i < (in>>8&0xF); i++) {
+            vm.rom[(vm.I - 0x200) - i] = vm.Vx[i];
+          }
+          break;
+        case 0x65:
+          for (int i = 0; i < (in>>8&0xF); i++) {
+            vm.Vx[i]  = vm.rom[(vm.I - 0x200) - i];
+          }
+          break;
       }
-      break;
   }
 
   vm.PC += 0x2;
