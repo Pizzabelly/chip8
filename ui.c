@@ -17,6 +17,7 @@ void init_curses() {
 }
 
 void draw() {
+  erase();
   for (int x = 0; x < 64; x++) {
     for (int y = 0; y < 32; y++) {
       if (vm.screen[x][y]) {
@@ -76,12 +77,12 @@ u8 ui_get_key(bool block) {
 void curses_thread(void* v) {
   u8 c;
   while(1) {
-    //erase();
     draw();
-    if ((c = ui_get_key(false)) <= 0xF) {
-      vm.keyboard[c] = 1;
-    }
-    usleep(100);
+    c = getch();
+    //if ((c = ui_get_key(false)) <= 0xF) {
+    //  vm.keyboard[c] = 1;
+    //}
+    usleep(10);
   }
 }
     

@@ -17,7 +17,7 @@
 #include "util.h"
 #include "chip8.h"
 
-#define ROM_FILE "roms/test_opcode.ch8"
+#define ROM_FILE "roms/breakout.ch8"
 
 static void load_rom();
 static void init_vm();
@@ -48,7 +48,7 @@ void load_rom() {
 }
 
 void vm_thread(void* v) {
-  u8 buf[255];
+  u8 buf[0xFF];
   while (1) {
     // read 2 bytes and convert to big-endian
     u16 in = htons(vm.rom[vm.PC + 0x1]<<8 | vm.rom[vm.PC]);
@@ -123,45 +123,47 @@ void vm_thread(void* v) {
             vm.Vx[in>>8&0xF] ^= vm.Vx[in>>4&0xF];
             break;
           case 0x4: // ADD Vx, Vy 
-            vm.Vx[in>>8&0xF] += vm.Vx[in>>4&0xF];
-            if (vm.Vx[in>>8&0xF] + vm.Vx[in>>4&0xF] > 255) {
-              vm.Vx[15] = 1;
-              vm.Vx[in>>8&0xF] &= 0xFF;
+            if ((vm.Vx[in>>8&0xF] + vm.Vx[in>>4&0xF]) > 0xFF) {
+              vm.Vx[0xF] = 1;
             } else {
-              vm.Vx[15] = 0;
+              vm.Vx[0xF] = 0;
             }
+            vm.Vx[in>>8&0xF] += vm.Vx[in>>4&0xF];
+            vm.Vx[in>>8&0xF] &= 0xFF;
             break;
           case 0x5: // SUB Vx, Vy 
             if (vm.Vx[in>>8&0xF] > vm.Vx[in>>4&0xF]) {
-              vm.Vx[15] = 1;
+              vm.Vx[0xF] = 1;
             } else {
-              vm.Vx[15] = 0;
+              vm.Vx[0xF] = 0;
             }
             vm.Vx[in>>8&0xF] -= vm.Vx[in>>4&0xF];
             break;
           case 0x6: // SHR Vx {, Vy}
             if ((vm.Vx[in>>8&0xF] & 1) == 1) {
-              vm.Vx[15] = 1;
+              vm.Vx[0xF] = 1;
+              printf("yeet\n");
             } else {
-              vm.Vx[15] = 0;
+              printf("unyeet\n");
+              vm.Vx[0xF] = 0;
             }
             vm.Vx[in>>8&0xF] /= 2;
             break;
           case 0x7: // SUBN Vx, Vy
             if (vm.Vx[in>>8&0xF] < vm.Vx[in>>4&0xF]) {
-              vm.Vx[15] = 1;
+              vm.Vx[0xF] = 1;
             } else {
-              vm.Vx[15] = 0;
+              vm.Vx[0xF] = 0;
             }
             vm.Vx[in>>8&0xF] = vm.Vx[in>>4&0xF] - vm.Vx[in>>8&0xF];
             break;
           case 0xE: // SHL Vx {, Vy} 
             if ((vm.Vx[in>>8&0xF] & 1) == 1) {
-              vm.Vx[15] = 1;
+              vm.Vx[0xF] = 1;
             } else {
-              vm.Vx[15] = 0;
+              vm.Vx[0xF] = 0;
             }
-            vm.Vx[in>>8&0xF] *= 2;
+            vm.Vx[in>>8&0xF] *= 0x2;
             break;
         }
         break;
@@ -174,12 +176,13 @@ void vm_thread(void* v) {
         vm.I = in&0xFFF;
         break;
       case 0xB: // JP V0, addr
-        vm.PC = ((in&0xFFF) + vm.Vx[0]) - 0x2;
+        vm.PC = ((in&0xFFF) + vm.Vx[0x0]) - 0x2;
         break;
       case 0xC: // RND Vx, byte
         vm.Vx[in>>8&0xF] = (rand() % 255) & in&0xFF;
         break;
       case 0xD: // DRW Vx, Vy, nibble
+        vm.Vx[0xF] = 0;
         memcpy(buf, &vm.rom[vm.I], in&0xF);
         for (int i = 0; i < (in&0xF); i++) {
           for (int s = 0; s < 8; s++) {
@@ -194,12 +197,14 @@ void vm_thread(void* v) {
 
               if (vm.screen[x][y]) {
                 vm.screen[x][y] = 0;
+                vm.Vx[0xF] = 1;
               } else {
                 vm.screen[x][y] = 1;
               }
             }
           }
         }
+        memset(buf, 0, 0xFF);
         break;
       case 0xE: switch (in&0xFF) {
           case 0x9E: // SKP Vx
@@ -240,39 +245,32 @@ void vm_thread(void* v) {
             vm.rom[vm.I+0x2] = (vm.Vx[in>>8&0xF] % 10);
             break;
           case 0x55: // LD [I], Vx
-            for (int i = 0; i < (in>>8&0xF); i++) {
+            for (int i = 0; i <= (in>>8&0xF); i++) {
+              printf("%i\n", i);
               vm.rom[(vm.I) + i] = vm.Vx[i];
             }
             break;
           case 0x65: // LD Vx, [I]
-            for (int i = 0; i < (in>>8&0xF); i++) {
-              vm.Vx[i]  = vm.rom[(vm.I) - i];
+            for (int i = 0; i <= (in>>8&0xF); i++) {
+              vm.Vx[i]  = vm.rom[(vm.I) + i];
             }
             break;
         }
         break;
     }
 
-    vm.PC += 0x2;
-    usleep(100);
-  }
-}
-
-void *dt_thread(void* v) {
-  while (1) {
-    if (vm.DT > 0) {
+    while (vm.DT > 0) {
       vm.DT--;
+      usleep(1000000/60);
     }
-    usleep(1000/60);
-  }
-}
 
-void *st_thread(void* v) {
-  while (1) {
-    if (vm.ST > 0) {
+    // TODO: play sound
+    while(vm.ST > 0) {
       vm.ST--;
+      usleep(1000000/60);
     }
-    usleep(1000/60);
+
+    vm.PC += 0x2;
   }
 }
 
@@ -285,8 +283,6 @@ int main(void) {
   HANDLE vm = CreateThread(NULL, 0, vm_thread, NULL, 0, NULL);
 #else
   pthread_t vm; pthread_create(&vm, NULL, (void*)vm_thread, (void*)0);
-  pthread_t dt; pthread_create(&dt, NULL, (void*)dt_thread, (void*)0);
-  pthread_t st; pthread_create(&st, NULL, (void*)st_thread, (void*)0);
 #endif
   
   //vm_thread(0);
