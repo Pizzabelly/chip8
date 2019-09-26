@@ -8,14 +8,12 @@ typedef struct {
 
   u16 PC;
 
+  u8 SP;
   u16 stack[16];
-  u16 stack_pos;
-  u16 stack_count;
 
   u8 DT;
   u8 ST;
   
-  u8 SP;
   u16 I;
 
   u8 Vx[16];

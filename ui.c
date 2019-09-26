@@ -76,7 +76,7 @@ u8 ui_get_key(bool block) {
 void curses_thread(void* v) {
   u8 c;
   while(1) {
-    erase();
+    //erase();
     draw();
     if ((c = ui_get_key(false)) <= 0xF) {
       vm.keyboard[c] = 1;
