@@ -4,7 +4,6 @@
 
 typedef struct {
   u8* rom;
-  u16 rom_size;
 
   u16 PC;
 
@@ -20,7 +19,7 @@ typedef struct {
 
   u8 keyboard[16];
 
-  u8 screen[64][32];
+  u8 screen[0x3F*0x1F];
 } chip8_vm;
 
 extern chip8_vm vm;

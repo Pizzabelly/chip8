@@ -17,36 +17,36 @@ void init_curses() {
 }
 
 void draw() {
-  erase();
-  for (int x = 0; x < 64; x++) {
-    for (int y = 0; y < 32; y++) {
-      if (vm.screen[x][y]) {
-        mvaddstr(y, x * 2, "[]");
-      }
+  for (int i = 0; i < (0x3F * 0x1F); i++) {
+    if (vm.screen[i]) {
+
+      // TODO: fix this lmao
+      mvaddstr(i / 0x1F, (i % 0x3F) * 2, "[]");
     }
   }
 
   char buf[25];
   for (int i = 0; i < 7; i++) {
     sprintf(buf, "V%x: 0x%x", i, vm.Vx[i]);
-    mvaddstr(34, 9 * i, buf);
+    mvaddstr(35, 9 * i, buf);
   }
   for (int i = 7; i < 15; i++) {
     sprintf(buf, "V%x: 0x%x", i, vm.Vx[i]);
-    mvaddstr(35, 9 * (i - 8), buf);
+    mvaddstr(36, 9 * (i - 8), buf);
   }
+
   sprintf(buf, "Vf: 0x%x", vm.Vx[15]);
-  mvaddstr(36, 0, buf);
+  mvaddstr(37, 0, buf);
   sprintf(buf, "SP: 0x%x", vm.SP);
-  mvaddstr(36, 9, buf);
+  mvaddstr(37, 9, buf);
   sprintf(buf, "DT: 0x%x", vm.DT);
-  mvaddstr(36, 18, buf);
+  mvaddstr(37, 18, buf);
   sprintf(buf, "ST: 0x%x", vm.ST);
-  mvaddstr(36, 27, buf);
+  mvaddstr(37, 27, buf);
   sprintf(buf, "PC: 0x%x", vm.PC);
-  mvaddstr(36, 36, buf);
+  mvaddstr(37, 36, buf);
   sprintf(buf, "I: 0x%x", vm.I);
-  mvaddstr(36, 46, buf);
+  mvaddstr(37, 46, buf);
 }
 
 u8 ui_get_key(bool block) {

@@ -17,7 +17,7 @@
 #include "util.h"
 #include "chip8.h"
 
-#define ROM_FILE "roms/breakout.ch8"
+#define ROM_FILE "roms/tetris.ch8"
 
 static void load_rom();
 static void init_vm();
@@ -48,11 +48,10 @@ void load_rom() {
 }
 
 void vm_thread(void* v) {
-  u8 buf[0xFF];
+  memset(&vm.screen, 0, sizeof(vm.screen));
   while (1) {
     // read 2 bytes and convert to big-endian
     u16 in = htons(vm.rom[vm.PC + 0x1]<<8 | vm.rom[vm.PC]);
-    //printf("%x\n", in);
 
     // in>>12&0xF  0xFFFf
     //               ^
@@ -128,8 +127,7 @@ void vm_thread(void* v) {
             } else {
               vm.Vx[0xF] = 0;
             }
-            vm.Vx[in>>8&0xF] += vm.Vx[in>>4&0xF];
-            vm.Vx[in>>8&0xF] &= 0xFF;
+            vm.Vx[in>>8&0xF] = (vm.Vx[in>>8&0xF] + vm.Vx[in>>4&0xF])&0xFF;
             break;
           case 0x5: // SUB Vx, Vy 
             if (vm.Vx[in>>8&0xF] > vm.Vx[in>>4&0xF]) {
@@ -140,14 +138,9 @@ void vm_thread(void* v) {
             vm.Vx[in>>8&0xF] -= vm.Vx[in>>4&0xF];
             break;
           case 0x6: // SHR Vx {, Vy}
-            if ((vm.Vx[in>>8&0xF] & 1) == 1) {
-              vm.Vx[0xF] = 1;
-              printf("yeet\n");
-            } else {
-              printf("unyeet\n");
-              vm.Vx[0xF] = 0;
-            }
-            vm.Vx[in>>8&0xF] /= 2;
+            vm.Vx[0xF] = (vm.Vx[in>>8&0xF] & 1); 
+            // TODO: toggle for Vx /= 2
+            vm.Vx[in>>8&0xF] = vm.Vx[in>>8&0xF]>>1;
             break;
           case 0x7: // SUBN Vx, Vy
             if (vm.Vx[in>>8&0xF] < vm.Vx[in>>4&0xF]) {
@@ -158,12 +151,9 @@ void vm_thread(void* v) {
             vm.Vx[in>>8&0xF] = vm.Vx[in>>4&0xF] - vm.Vx[in>>8&0xF];
             break;
           case 0xE: // SHL Vx {, Vy} 
-            if ((vm.Vx[in>>8&0xF] & 1) == 1) {
-              vm.Vx[0xF] = 1;
-            } else {
-              vm.Vx[0xF] = 0;
-            }
-            vm.Vx[in>>8&0xF] *= 0x2;
+            vm.Vx[0xF] = ((vm.Vx[in>>8&0xF]>>7) & 1);
+            // TODO: toggle for Vx *= 2;
+            vm.Vx[in>>8&0xF] = vm.Vx[in>>8&0xF]<<1;
             break;
         }
         break;
@@ -183,28 +173,28 @@ void vm_thread(void* v) {
         break;
       case 0xD: // DRW Vx, Vy, nibble
         vm.Vx[0xF] = 0;
-        memcpy(buf, &vm.rom[vm.I], in&0xF);
         for (int i = 0; i < (in&0xF); i++) {
           for (int s = 0; s < 8; s++) {
-            u8 bit = (buf[i]>>s)&1;
+            u8 pix = (vm.rom[vm.I + i] & (0x80 >> s)) != 0;
 
-            if (bit) {
-              u8 x = (vm.Vx[in>>8&0xF] + 7) - s;
-              u8 y = i + vm.Vx[in>>4&0xF];
-              
-              while (x > 63) { x -= 63; }
-              while (y > 31) { y -= 31; }
+            if (pix) {
+              u8 y = (i + vm.Vx[in>>4&0xF])&0x1F;
+              u8 x = ((vm.Vx[in>>8&0xF] + 7) - s)&0x3F;
 
-              if (vm.screen[x][y]) {
-                vm.screen[x][y] = 0;
+              //while (x > 0x3F) { x -= 0x3F; }
+              //while (y > 0x1F) { y -= 0x1F; }
+   
+              u8 byte = y * 64 + x;
+              u8 bit = 1 << (byte * 0x07);
+
+              if (vm.screen[byte>>3] & bit) {
                 vm.Vx[0xF] = 1;
-              } else {
-                vm.screen[x][y] = 1;
               }
+
+              vm.screen[byte>>3] ^= bit;
             }
           }
         }
-        memset(buf, 0, 0xFF);
         break;
       case 0xE: switch (in&0xFF) {
           case 0x9E: // SKP Vx
@@ -225,7 +215,7 @@ void vm_thread(void* v) {
             vm.Vx[in>>8&0xF] = vm.DT;
             break;
           case 0x0A: // LD Vx, K
-            vm.Vx[in>>8&0xF] = 0xA;//ui_get_key(true);
+            //vm.Vx[in>>8&0xF] = 0xA;//ui_get_key(true);
             break;
           case 0x15: // LD DT, Vx
             vm.DT = vm.Vx[in>>8&0xF];
@@ -246,7 +236,6 @@ void vm_thread(void* v) {
             break;
           case 0x55: // LD [I], Vx
             for (int i = 0; i <= (in>>8&0xF); i++) {
-              printf("%i\n", i);
               vm.rom[(vm.I) + i] = vm.Vx[i];
             }
             break;
@@ -258,7 +247,7 @@ void vm_thread(void* v) {
         }
         break;
     }
-
+      
     while (vm.DT > 0) {
       vm.DT--;
       usleep(1000000/60);
@@ -285,7 +274,6 @@ int main(void) {
   pthread_t vm; pthread_create(&vm, NULL, (void*)vm_thread, (void*)0);
 #endif
   
-  //vm_thread(0);
   init_curses();
   curses_thread(0);
 
