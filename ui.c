@@ -17,11 +17,14 @@ void init_curses() {
 }
 
 void draw() {
-  for (int i = 0; i < (0x3F * 0x1F); i++) {
-    if (vm.screen[i]) {
-
-      // TODO: fix this lmao
-      mvaddstr(i / 0x1F, (i % 0x3F) * 2, "[]");
+  erase();
+  for (int x = 0; x < 0x3F; x++) {
+    for (int y = 0; y < 0x1F; y++) {
+      int byte = y * 64 + x;
+      int bit = byte & 0x07;
+      if ((vm.screen[byte>>3] & (1 << bit)) != 0) {
+        mvaddstr(y, x * 2, "[]");
+      }
     }
   }
 
@@ -78,11 +81,22 @@ void curses_thread(void* v) {
   u8 c;
   while(1) {
     draw();
+    vm_step();
+  
+    if (vm.DT > 0) {
+      vm.DT--;
+      usleep(1000000/60);
+    } 
+
+    if (vm.ST > 0) {
+      vm.ST--;
+      usleep(1000000/60);
+    }
+
     c = getch();
     //if ((c = ui_get_key(false)) <= 0xF) {
     //  vm.keyboard[c] = 1;
     //}
-    usleep(10);
   }
 }
     

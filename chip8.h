@@ -2,6 +2,8 @@
 
 #include "util.h"
 
+void vm_step();
+
 typedef struct {
   u8* rom;
 
