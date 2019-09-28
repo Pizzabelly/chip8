@@ -4,11 +4,11 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include <arpa/inet.h>
 
 #ifdef _WIN32
-#include <window.h>
-#else
+#include <winsock.h>
+#else 
+#include <arpa/inet.h>
 #include <unistd.h>
 #endif
 

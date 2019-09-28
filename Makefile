@@ -10,7 +10,7 @@ all: executable
 win: executable
 
 all: LDFLAGS  = -lSDL2
-win: LDFLAGS  = -lSDL2
+win: LDFLAGS  = $(shell pkg-config --libs sdl2) -lws2_32
 
 executable: chip8.c ui_sdl.c
 	$(CC) $(CFLAGS) -o $(BIN) chip8.c ui_sdl.c $(LDFLAGS)

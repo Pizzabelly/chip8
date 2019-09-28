@@ -1,3 +1,5 @@
+#define SDL_MAIN_HANDLED
+
 #include <time.h>
 #include <SDL2/SDL.h>
 
@@ -22,7 +24,7 @@ void draw() {
   SDL_SetRenderDrawColor(r, 160, 200, 255, 255);
   //SDL_RenderFillRect(r, &box);
   for (int x = 0; x < 0x3F; x++) {
-    for (int y = 0; y < 0x1F; y++) {
+    for (int y = 0; y <= 0x1F; y++) {
       int byte = y * 64 + x;
       int bit = byte & 0x07;
       if ((vm.screen[byte>>3] & (1 << bit)) != 0) {
@@ -35,12 +37,13 @@ void draw() {
   SDL_RenderPresent(r);
 }
 
-int main(void) {
+int main(int argc, char* argv[]) {
   srand(time(NULL));
   setup();
   load_rom();
   init_vm();
 
+  int last_500hz = SDL_GetTicks();
   int last_60hz = SDL_GetTicks();
   int last_45hz = SDL_GetTicks();
 
@@ -95,6 +98,12 @@ int main(void) {
     }
 
     int cur = SDL_GetTicks();
+  
+    if (cur - last_500hz >= (1000/500)) {
+      vm_step();
+      last_500hz = cur;
+    }
+
     if (cur - last_60hz >= (1000/60)) {
       if (vm.DT > 0) {
         vm.DT--;
@@ -111,8 +120,6 @@ int main(void) {
       draw();
       last_45hz = cur;
     }
-
-    vm_step();
   }
   return 0;
 }
