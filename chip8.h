@@ -2,7 +2,9 @@
 
 #include "util.h"
 
+void init_vm();
 void vm_step();
+void load_rom();
 
 typedef struct {
   u8* rom;

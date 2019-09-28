@@ -10,17 +10,12 @@
 #include <window.h>
 #else
 #include <unistd.h>
-#include <pthread.h>
 #endif
 
-#include "ui.h"
 #include "util.h"
 #include "chip8.h"
 
 #define ROM_FILE "roms/tetris.ch8"
-
-static void load_rom();
-static void init_vm();
 
 chip8_vm vm;
 
@@ -177,9 +172,6 @@ void vm_step() {
           if (pix) {
             int y = (vm.Vx[in>>4&0xF] + i)&0x1F;
             int x = (vm.Vx[in>>8&0xF] + s)&0x3F;
-
-            //while (x > 0x3F) { x -= 0x3F; }
-            //while (y > 0x1F) { y -= 0x1F; }
  
             int byte = y * 64 + x;
             int bit = 1 << (byte & 0x07);
@@ -246,21 +238,4 @@ void vm_step() {
   }
 
   vm.PC += 0x2;
-}
-
-int main(void) {
-  srand(time(NULL));
-  load_rom();
-  init_vm();
-
-#ifdef _WIN32
-  HANDLE vm = CreateThread(NULL, 0, vm_thread, NULL, 0, NULL);
-#else
-  //pthread_t vm; pthread_create(&vm, NULL, (void*)vm_thread, (void*)0);
-#endif
-  
-  init_curses();
-  curses_thread(0);
-
-  return 0;
 }
