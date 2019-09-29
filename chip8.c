@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 #include <math.h>
 #include <time.h>
 
@@ -15,30 +16,55 @@
 #include "util.h"
 #include "chip8.h"
 
-#define ROM_FILE "roms/tetris.ch8"
-
 chip8_vm vm;
+
+static u8 font[] = {
+  0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+  0x20, 0x60, 0x20, 0x20, 0x70, // 1
+  0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+  0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+  0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+  0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+  0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+  0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+  0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+  0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+  0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+  0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+  0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+  0xE0, 0x80, 0x80, 0x80, 0xE0, // D
+  0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+  0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
 
 void init_vm() {
   vm.PC = 0x200; // start of chip8 programs
 }
 
-void load_rom() {
+void load_rom(char *file_path) {
   memset(&vm, 0, sizeof(chip8_vm));
-  FILE* f = fopen(ROM_FILE, "r");
+  int fd = open(file_path, O_RDONLY);
+  FILE* f = fdopen(fd, "r");
   fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  fseek(f, 0, SEEK_SET);
+  off_t fsize = ftell(f);
+  rewind(f);
 
   vm.rom = (u8*)malloc(0xFFF);
 
   memset(vm.rom, 0, 0xFFF);
-  if (fread(&vm.rom[0x200], 1, fsize, f) != fsize) {
+  
+#ifdef _WIN32
+  size_t res = read(fd, &vm.rom[0x200], fsize);
+#else
+  size_t res = fread(&vm.rom[0x200], 1, fsize, f);
+#endif
+
+  if (res != fsize) {
     printf("err: failed to read rom fully\n");
     exit(1);
   }
 
-  fclose(f);
+  fclose(f); close(fd);
 }
 
 void vm_step() {
@@ -165,16 +191,16 @@ void vm_step() {
       break;
     case 0xD: // DRW Vx, Vy, nibble
       vm.Vx[0xF] = 0;
-      for (int i = 0; i < (in&0xF); i++) {
-        for (int s = 0; s < 8; s++) {
-          int pix = (vm.rom[vm.I + i] & (0x80 >> s)) != 0;
+      for (u32 i = 0; i < (in&0xF); i++) {
+        for (u32 s = 0; s < 8; s++) {
+          u8 pix = (vm.rom[vm.I + i] & (0x80 >> s)) != 0;
 
           if (pix) {
-            int y = (vm.Vx[in>>4&0xF] + i)&0x1F;
-            int x = (vm.Vx[in>>8&0xF] + s)&0x3F;
+            u8 y = (vm.Vx[in>>4&0xF] + i)&0x1F;
+            u8 x = (vm.Vx[in>>8&0xF] + s)&0x3F;
  
-            int byte = y * 64 + x;
-            int bit = 1 << (byte & 0x07);
+            u32 byte = y * 64 + x;
+            u32 bit = 1 << (byte & 0x07);
 
             if (vm.screen[byte>>3] & bit) {
               vm.Vx[0xF] = 1;
@@ -224,12 +250,12 @@ void vm_step() {
           vm.rom[vm.I+0x2] = (vm.Vx[in>>8&0xF] % 10);
           break;
         case 0x55: // LD [I], Vx
-          for (int i = 0; i <= (in>>8&0xF); i++) {
+          for (u8 i = 0; i <= (in>>8&0xF); i++) {
             vm.rom[(vm.I) + i] = vm.Vx[i];
           }
           break;
         case 0x65: // LD Vx, [I]
-          for (int i = 0; i <= (in>>8&0xF); i++) {
+          for (u8 i = 0; i <= (in>>8&0xF); i++) {
             vm.Vx[i]  = vm.rom[(vm.I) + i];
           }
           break;

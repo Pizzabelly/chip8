@@ -1,7 +1,12 @@
 #define SDL_MAIN_HANDLED
 
 #include <time.h>
+
+#ifdef _WIN32
+#include <SDL.h>
+#else
 #include <SDL2/SDL.h>
+#endif
 
 #include "chip8.h"
 
@@ -38,10 +43,16 @@ void draw() {
 }
 
 int main(int argc, char* argv[]) {
+  if (argc != 2) {
+    printf("%s [rom file]\n", argv[0]);
+    return 1;
+  }
+
   srand(time(NULL));
-  setup();
-  load_rom();
+
+  load_rom(argv[1]);
   init_vm();
+  setup();
 
   int last_500hz = SDL_GetTicks();
   int last_60hz = SDL_GetTicks();
