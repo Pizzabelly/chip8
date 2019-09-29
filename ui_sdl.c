@@ -28,7 +28,7 @@ void draw() {
   SDL_RenderClear(r);
   SDL_SetRenderDrawColor(r, 160, 200, 255, 255);
   //SDL_RenderFillRect(r, &box);
-  for (int x = 0; x < 0x3F; x++) {
+  for (int x = 0; x <= 0x3F; x++) {
     for (int y = 0; y <= 0x1F; y++) {
       int byte = y * 64 + x;
       int bit = byte & 0x07;

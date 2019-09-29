@@ -39,6 +39,10 @@ static u8 font[] = {
 
 void init_vm() {
   vm.PC = 0x200; // start of chip8 programs
+
+  for (int i = 0; i < sizeof(font); i++) {
+    vm.rom[0x100 + i] = font[i];
+  }
 }
 
 void load_rom(char *file_path) {
@@ -242,7 +246,7 @@ void vm_step() {
           vm.I += vm.Vx[in>>8&0xF];
           break;
         case 0x29: // LD F, Vx
-          // characters
+          vm.I = 0x100 + (vm.Vx[in>>8&0xF] * 5);
           break;
         case 0x33: // LD B, Vx
           vm.rom[vm.I] = (vm.Vx[in>>8&0xF] / 100);
