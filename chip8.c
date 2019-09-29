@@ -18,6 +18,8 @@
 
 chip8_vm vm;
 
+#define FONT_OFFSET 0x100
+
 static u8 font[] = {
   0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
   0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -41,7 +43,7 @@ void init_vm() {
   vm.PC = 0x200; // start of chip8 programs
 
   for (int i = 0; i < sizeof(font); i++) {
-    vm.rom[0x100 + i] = font[i];
+    vm.rom[FONT_OFFSET + i] = font[i];
   }
 }
 
@@ -65,7 +67,6 @@ void load_rom(char *file_path) {
 
   if (res != fsize) {
     printf("err: failed to read rom fully\n");
-    exit(1);
   }
 
   fclose(f); close(fd);
@@ -246,7 +247,7 @@ void vm_step() {
           vm.I += vm.Vx[in>>8&0xF];
           break;
         case 0x29: // LD F, Vx
-          vm.I = 0x100 + (vm.Vx[in>>8&0xF] * 5);
+          vm.I = FONT_OFFSET + (vm.Vx[in>>8&0xF] * 5);
           break;
         case 0x33: // LD B, Vx
           vm.rom[vm.I] = (vm.Vx[in>>8&0xF] / 100);
