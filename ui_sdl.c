@@ -24,9 +24,9 @@ void setup() {
 
 void draw() {
   SDL_Rect box = (SDL_Rect){1, 0, 10, 10};
-  SDL_SetRenderDrawColor(r, 50, 0, 0, 255);
+  SDL_SetRenderDrawColor(r, 12, 5, 9, 255);
   SDL_RenderClear(r);
-  SDL_SetRenderDrawColor(r, 160, 200, 255, 255);
+  SDL_SetRenderDrawColor(r, 228, 167, 104, 255);
   //SDL_RenderFillRect(r, &box);
   for (int x = 0; x <= 0x3F; x++) {
     for (int y = 0; y <= 0x1F; y++) {

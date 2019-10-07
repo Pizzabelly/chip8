@@ -42,8 +42,9 @@ static u8 font[] = {
 void init_vm() {
   vm.PC = 0x200; // start of chip8 programs
 
+  // write fonts into memory
   for (int i = 0; i < sizeof(font); i++) {
-    vm.rom[FONT_OFFSET + i] = font[i];
+    vm.ram[FONT_OFFSET + i] = font[i];
   }
 }
 
@@ -55,14 +56,14 @@ void load_rom(char *file_path) {
   off_t fsize = ftell(f);
   rewind(f);
 
-  vm.rom = (u8*)malloc(0xFFF);
+  vm.ram = (u8*)malloc(0xFFF);
 
-  memset(vm.rom, 0, 0xFFF);
+  memset(vm.ram, 0, 0xFFF);
   
 #ifdef _WIN32
-  size_t res = read(fd, &vm.rom[0x200], fsize);
+  size_t res = read(fd, &vm.ram[0x200], fsize);
 #else
-  size_t res = fread(&vm.rom[0x200], 1, fsize, f);
+  size_t res = fread(&vm.ram[0x200], 1, fsize, f);
 #endif
 
   if (res != fsize) {
@@ -74,7 +75,7 @@ void load_rom(char *file_path) {
 
 void vm_step() {
   // read 2 bytes and convert to big-endian
-  u16 in = htons(vm.rom[vm.PC + 0x1]<<8 | vm.rom[vm.PC]);
+  u16 in = htons(vm.ram[vm.PC + 0x1]<<8 | vm.ram[vm.PC]);
 
   // in>>12&0xF  0xFFFF
   //               ^
@@ -84,12 +85,10 @@ void vm_step() {
   //                 ^
   // in&0xF      0xFFFF
   //                  ^
+  // in&0xFF     0xFFFF
+  //                 ^^
   // in&0xFFF    0xFFFF
   //                ^^^
-  // in&0xFF     0xFFFF
-  //                 ^^
-  // in&0xFF     0xFFFF
-  //                 ^^
 
   switch ((in>>12&0xF)) {
     case 0x0: 
@@ -198,7 +197,7 @@ void vm_step() {
       vm.Vx[0xF] = 0;
       for (u32 i = 0; i < (in&0xF); i++) {
         for (u32 s = 0; s < 8; s++) {
-          u8 pix = (vm.rom[vm.I + i] & (0x80 >> s)) != 0;
+          u8 pix = (vm.ram[vm.I + i] & (0x80 >> s)) != 0;
 
           if (pix) {
             u8 y = (vm.Vx[in>>4&0xF] + i)&0x1F;
@@ -250,18 +249,18 @@ void vm_step() {
           vm.I = FONT_OFFSET + (vm.Vx[in>>8&0xF] * 5);
           break;
         case 0x33: // LD B, Vx
-          vm.rom[vm.I] = (vm.Vx[in>>8&0xF] / 100);
-          vm.rom[vm.I+0x1] = ((vm.Vx[in>>8&0xF] % 100)/10);
-          vm.rom[vm.I+0x2] = (vm.Vx[in>>8&0xF] % 10);
+          vm.ram[vm.I] = (vm.Vx[in>>8&0xF] / 100);
+          vm.ram[vm.I+0x1] = ((vm.Vx[in>>8&0xF] % 100)/10);
+          vm.ram[vm.I+0x2] = (vm.Vx[in>>8&0xF] % 10);
           break;
         case 0x55: // LD [I], Vx
           for (u8 i = 0; i <= (in>>8&0xF); i++) {
-            vm.rom[(vm.I) + i] = vm.Vx[i];
+            vm.ram[(vm.I) + i] = vm.Vx[i];
           }
           break;
         case 0x65: // LD Vx, [I]
           for (u8 i = 0; i <= (in>>8&0xF); i++) {
-            vm.Vx[i]  = vm.rom[(vm.I) + i];
+            vm.Vx[i]  = vm.ram[(vm.I) + i];
           }
           break;
       }

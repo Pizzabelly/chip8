@@ -7,7 +7,7 @@ void vm_step();
 void load_rom();
 
 typedef struct {
-  u8* rom;
+  u8* ram;
 
   u16 PC;
 
