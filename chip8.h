@@ -23,7 +23,7 @@ typedef struct {
 
   u8 keyboard[16];
 
-  u8 screen[0x3F*0x1F];
+  u8 screen[250];
 } chip8_vm;
 
 extern chip8_vm vm;

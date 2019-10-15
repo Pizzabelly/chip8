@@ -197,6 +197,8 @@ void vm_step() {
       vm.Vx[0xF] = 0;
       for (u32 i = 0; i < (in&0xF); i++) {
         for (u32 s = 0; s < 8; s++) {
+
+          // 0x80 = 10000000
           u8 pix = (vm.ram[vm.I + i] & (0x80 >> s)) != 0;
 
           if (pix) {
@@ -204,8 +206,13 @@ void vm_step() {
             u8 x = (vm.Vx[in>>8&0xF] + s)&0x3F;
  
             u32 byte = y * 64 + x;
+
+            // put the single 1 bit in the position
+            // that is relative to the pixel
             u32 bit = 1 << (byte & 0x07);
 
+            // byte>>3 ~ byte / 8 
+            // used to get the index of byte to xor
             if (vm.screen[byte>>3] & bit) {
               vm.Vx[0xF] = 1;
             }
