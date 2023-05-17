@@ -39,7 +39,7 @@ static u8 font[] = {
   0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
-void init_vm() {
+void init_vm(void) {
   vm.PC = 0x200; // start of chip8 programs
 
   // write fonts into memory
@@ -48,9 +48,9 @@ void init_vm() {
   }
 }
 
-void load_rom(char *file_path) {
+void load_rom(char *path) {
   memset(&vm, 0, sizeof(chip8_vm));
-  int fd = open(file_path, O_RDONLY);
+  int fd = open(path, O_RDONLY);
   FILE* f = fdopen(fd, "r");
   fseek(f, 0, SEEK_END);
   off_t fsize = ftell(f);
@@ -73,7 +73,7 @@ void load_rom(char *file_path) {
   fclose(f); close(fd);
 }
 
-void vm_step() {
+void vm_step(void) {
   // read 2 bytes and convert to big-endian
   u16 in = htons(vm.ram[vm.PC + 0x1]<<8 | vm.ram[vm.PC]);
 
@@ -198,7 +198,7 @@ void vm_step() {
       for (u32 i = 0; i < (in&0xF); i++) {
         for (u32 s = 0; s < 8; s++) {
 
-          // 0x80 = 10000000
+          // 0x80 = b10000000
           u8 pix = (vm.ram[vm.I + i] & (0x80 >> s)) != 0;
 
           if (pix) {
@@ -207,12 +207,13 @@ void vm_step() {
  
             u32 byte = y * 64 + x;
 
-            // put the single 1 bit in the position
+            // put the single '1' bit in the position
             // that is relative to the pixel
-            u32 bit = 1 << (byte & 0x07);
+            u8 bit = 1 << (byte & 0x07);
 
             // byte>>3 ~ byte / 8 
-            // used to get the index of byte to xor
+            // used to get the index of the byte
+            // containing the bit to change
             if (vm.screen[byte>>3] & bit) {
               vm.Vx[0xF] = 1;
             }

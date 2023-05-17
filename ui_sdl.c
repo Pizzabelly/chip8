@@ -1,6 +1,7 @@
 #define SDL_MAIN_HANDLED
 
 #include <time.h>
+#include <stdbool.h>
 
 #ifdef _WIN32
 #include <SDL.h>
@@ -15,19 +16,18 @@
 
 SDL_Renderer *r;
 
-void setup() {
+void setup(void) {
   SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
   SDL_Window* win = SDL_CreateWindow("chip8", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, W, H, SDL_WINDOW_SHOWN);
   r = SDL_CreateRenderer(win, -1, SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_ACCELERATED);  
   SDL_RenderClear(r);
 }
 
-void draw() {
-  SDL_Rect box = (SDL_Rect){1, 0, 10, 10};
+void draw(void) {
+  SDL_Rect box = (SDL_Rect){0, 0, 10, 10};
   SDL_SetRenderDrawColor(r, 12, 5, 9, 255);
   SDL_RenderClear(r);
   SDL_SetRenderDrawColor(r, 228, 167, 104, 255);
-  //SDL_RenderFillRect(r, &box);
   for (int x = 0; x <= 0x3F; x++) {
     for (int y = 0; y <= 0x1F; y++) {
       int byte = y * 64 + x;
@@ -44,7 +44,7 @@ void draw() {
 
 int main(int argc, char* argv[]) {
   if (argc != 2) {
-    printf("%s [rom file]\n", argv[0]);
+    printf("./%s <rom file>\n", argv[0]);
     return 1;
   }
 
@@ -55,19 +55,20 @@ int main(int argc, char* argv[]) {
   setup();
 
   int last_500hz = SDL_GetTicks();
-  int last_60hz = SDL_GetTicks();
-  int last_45hz = SDL_GetTicks();
+  int last_60hz = last_500hz;
+  int last_45hz = last_500hz;
+
+  bool quit = false;
 
   SDL_Event e;
-  while (1) {
+  while (!quit) {
     SDL_PollEvent(&e);
     switch (e.type) {
+      case SDL_QUIT:
+        quit = true; break;
       case SDL_KEYDOWN:
         switch (e.key.keysym.sym) {
-          case SDLK_ESCAPE:
-            SDL_Quit();
-            exit(0);
-            break;
+          case SDLK_ESCAPE: quit = true; break;
           case '1': vm.keyboard[0x0] = 1; break;
           case '2': vm.keyboard[0x1] = 1; break;
           case '3': vm.keyboard[0x2] = 1; break;
@@ -132,6 +133,9 @@ int main(int argc, char* argv[]) {
       last_45hz = cur;
     }
   }
+
+  SDL_Quit();
+
   return 0;
 }
   

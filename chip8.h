@@ -2,9 +2,9 @@
 
 #include "util.h"
 
-void init_vm();
-void vm_step();
-void load_rom();
+void init_vm(void);
+void vm_step(void);
+void load_rom(char *path);
 
 typedef struct {
   u8* ram;
